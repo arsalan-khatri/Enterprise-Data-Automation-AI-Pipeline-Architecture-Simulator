@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Support Desk — Raise a Ticket</title>
+<style>
+  :root{
+    --ink:#1f2937;
+    --ink-soft:#5b6472;
+    --paper:#faf7f2;
+    --panel:#ffffff;
+    --line:#e7e0d4;
+    --teal:#0f6857;
+    --teal-dark:#0b4d40;
+    --danger:#b3261e;
+    --warn:#c2740c;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Inter, system-ui, -apple-system, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .config-bar{
+    background:#fff; border-bottom:1px solid var(--line); padding:8px 6vw;
+    font-size:0.78rem; color:var(--ink-soft); display:flex; gap:8px; align-items:center;
+  }
+  .config-bar input{
+    border:1px solid var(--line); border-radius:4px; padding:4px 8px; font-size:0.78rem; width:220px;
+  }
+  header{
+    padding:28px 6vw 20px;
+    border-bottom:1px solid var(--line);
+  }
+  header h1{
+    font-family:Georgia, 'Times New Roman', serif;
+    font-weight:600;
+    font-size:2rem;
+    margin:0;
+  }
+  header p{margin:4px 0 0; color:var(--ink-soft); font-size:0.95rem;}
+
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:32px 6vw 60px;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+  }
+  form{display:flex; flex-direction:column; gap:14px;}
+  label{font-size:0.82rem; color:var(--ink-soft);}
+  input, textarea{
+    padding:10px 12px; border:1px solid var(--line); border-radius:6px; font-size:0.92rem;
+    width:100%; font-family:inherit;
+  }
+  textarea{min-height:110px; resize:vertical;}
+  .submit-btn{
+    margin-top:6px;
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    padding:12px;
+    border-radius:6px;
+    font-size:0.95rem;
+    cursor:pointer;
+  }
+  .submit-btn:hover{background:var(--teal-dark);}
+  .submit-btn:disabled{background:#c7c2b6; cursor:not-allowed;}
+
+  .result{
+    margin-top:22px;
+    border-radius:var(--radius);
+    border:1px solid var(--line);
+    overflow:hidden;
+  }
+  .result-header{
+    padding:14px 18px;
+    font-weight:600;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .result-header.success{background:#e6f4ef; color:var(--teal-dark);}
+  .result-header.warning{background:#fbf1e0; color:var(--warn);}
+  .result-header.error{background:#fbe9e7; color:var(--danger);}
+
+  .result-body{padding:16px 18px; background:#fff; font-size:0.9rem;}
+  .kv{display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f1ede4;}
+  .kv:last-child{border-bottom:none;}
+  .kv span:first-child{color:var(--ink-soft);}
+  .priority-tag{
+    display:inline-block; padding:3px 10px; border-radius:999px; font-size:0.78rem; font-weight:600;
+  }
+  .priority-High{background:#fbe9e7; color:var(--danger);}
+  .priority-Medium{background:#fbf1e0; color:var(--warn);}
+  .priority-Low{background:#e6f4ef; color:var(--teal-dark);}
+</style>
+</head>
+<body>
+
+<div class="config-bar">
+  API base URL: <input id="apiBase" value="http://127.0.0.1:8000">
+</div>
+
+<header>
+  <h1>Support Desk</h1>
+  <p>Describe the issue — it's routed and prioritized automatically.</p>
+</header>
+
+<main>
+  <div class="panel">
+    <form id="ticketForm">
+      <div>
+        <label for="custId">Customer ID</label>
+        <input id="custId" required placeholder="e.g. C-4F9A2B">
+      </div>
+      <div>
+        <label for="message">What's going on?</label>
+        <textarea id="message" required placeholder="e.g. mera order abi tk deliver nahi hua, 5 din ho gaye hain"></textarea>
+      </div>
+      <button type="submit" class="submit-btn" id="submitBtn">Submit ticket</button>
+    </form>
+
+    <div id="resultBox"></div>
+  </div>
+</main>
+
+<script>
+function apiBase(){ return document.getElementById('apiBase').value.replace(/\/$/, ''); }
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const submitBtn = document.getElementById('submitBtn');
+  const resultBox = document.getElementById('resultBox');
+  const payload = {
+    customer_id: document.getElementById('custId').value.trim(),
+    message: document.getElementById('message').value.trim()
+  };
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+  resultBox.innerHTML = '';
+  try{
+    const res = await fetch(apiBase() + '/predict-ticket', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Request failed');
+
+    if(data.status === 'error'){
+      resultBox.innerHTML = `<div class="result">
+        <div class="result-header error">Not registered</div>
+        <div class="result-body">${escapeHtml(data.message)}</div>
+      </div>`;
+    } else if(data.status === 'warning'){
+      resultBox.innerHTML = `<div class="result">
+        <div class="result-header warning">Already logged</div>
+        <div class="result-body">
+          ${escapeHtml(data.message)}<br>
+          <span style="color:var(--ink-soft)">Existing ticket: ${escapeHtml(data.existing_ticket_id)}</span>
+        </div>
+      </div>`;
+    } else {
+      const priority = data.ml_decision.priority;
+      resultBox.innerHTML = `<div class="result">
+        <div class="result-header success">Ticket ${escapeHtml(data.ticket_details.ticket_id)} created</div>
+        <div class="result-body">
+          <div class="kv"><span>Category</span><span>${escapeHtml(data.llm_analysis.department_assigned)}</span></div>
+          <div class="kv"><span>Intent</span><span>${escapeHtml(data.llm_analysis.intent)}</span></div>
+          <div class="kv"><span>Sentiment</span><span>${escapeHtml(data.llm_analysis.sentiment)}</span></div>
+          <div class="kv"><span>Priority</span><span class="priority-tag priority-${escapeHtml(String(priority))}">${escapeHtml(String(priority))}</span></div>
+          <div class="kv"><span>Customer type</span><span>${escapeHtml(data.dynamic_data_fetched.customer_type)}</span></div>
+          <div class="kv"><span>Lifetime order value</span><span>Rs. ${Number(data.dynamic_data_fetched.order_value).toLocaleString()}</span></div>
+          <div class="kv"><span>Previous complaints</span><span>${data.dynamic_data_fetched.previous_complaints}</span></div>
+        </div>
+      </div>`;
+    }
+    document.getElementById('message').value = '';
+  }catch(err){
+    resultBox.innerHTML = `<div class="result">
+      <div class="result-header error">Something went wrong</div>
+      <div class="result-body">${escapeHtml(err.message)}</div>
+    </div>`;
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit ticket';
+  }
+});
+</script>
+</body>
+</html>

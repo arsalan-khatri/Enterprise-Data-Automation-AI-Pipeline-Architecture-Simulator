@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storefront — Checkout</title>
+<style>
+  :root{
+    --ink:#1f2937;
+    --ink-soft:#5b6472;
+    --paper:#faf7f2;
+    --panel:#ffffff;
+    --line:#e7e0d4;
+    --teal:#0f6857;
+    --teal-dark:#0b4d40;
+    --gold:#c2740c;
+    --danger:#b3261e;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', Inter, system-ui, -apple-system, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    padding:28px 6vw 20px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header h1{
+    font-family:Georgia, 'Times New Roman', serif;
+    font-weight:600;
+    font-size:2rem;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  header p{margin:4px 0 0; color:var(--ink-soft); font-size:0.95rem;}
+  .cart-pill{
+    background:var(--teal);
+    color:#fff;
+    padding:10px 18px;
+    border-radius:999px;
+    font-size:0.9rem;
+    cursor:pointer;
+    border:none;
+  }
+  main{
+    display:grid;
+    grid-template-columns:1fr 340px;
+    gap:32px;
+    padding:32px 6vw 60px;
+    align-items:start;
+  }
+  @media (max-width:860px){ main{grid-template-columns:1fr;} }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(220px,1fr));
+    gap:18px;
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .card h3{margin:0; font-size:1.05rem;}
+  .card p.desc{margin:0; font-size:0.85rem; color:var(--ink-soft); flex-grow:1;}
+  .card .price{font-size:1.1rem; font-weight:700; color:var(--teal-dark);}
+  .card .stock{font-size:0.78rem; color:var(--ink-soft);}
+  .card button{
+    margin-top:6px;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    padding:9px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:0.9rem;
+  }
+  .card button:hover{background:var(--teal-dark);}
+  .card button:disabled{background:#c7c2b6; cursor:not-allowed;}
+
+  aside{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px;
+    position:sticky;
+    top:24px;
+  }
+  aside h2{margin:0 0 14px; font-size:1.15rem;}
+  .cart-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+    font-size:0.9rem;
+  }
+  .cart-row .qty-controls{display:flex; align-items:center; gap:6px;}
+  .cart-row .qty-controls button{
+    width:22px; height:22px; border:1px solid var(--line); background:#fff;
+    border-radius:4px; cursor:pointer; font-size:0.85rem; line-height:1;
+  }
+  .cart-empty{color:var(--ink-soft); font-size:0.9rem; padding:12px 0;}
+  .total-row{
+    display:flex; justify-content:space-between;
+    font-weight:700; padding-top:12px; margin-top:6px; font-size:1rem;
+  }
+
+  form.checkout-form{margin-top:18px; display:flex; flex-direction:column; gap:10px;}
+  form.checkout-form label{font-size:0.8rem; color:var(--ink-soft);}
+  form.checkout-form input, form.checkout-form select{
+    padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:0.9rem;
+    width:100%;
+  }
+  .submit-btn{
+    margin-top:8px;
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    padding:12px;
+    border-radius:6px;
+    font-size:0.95rem;
+    cursor:pointer;
+  }
+  .submit-btn:hover{background:var(--teal-dark);}
+  .submit-btn:disabled{background:#c7c2b6; cursor:not-allowed;}
+
+  .msg{
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:8px;
+    font-size:0.88rem;
+    line-height:1.4;
+  }
+  .msg.success{background:#e6f4ef; color:var(--teal-dark); border:1px solid #bfe3d5;}
+  .msg.error{background:#fbe9e7; color:var(--danger); border:1px solid #f2c6c0;}
+
+  .config-bar{
+    background:#fff; border-bottom:1px solid var(--line); padding:8px 6vw;
+    font-size:0.78rem; color:var(--ink-soft); display:flex; gap:8px; align-items:center;
+  }
+  .config-bar input{
+    border:1px solid var(--line); border-radius:4px; padding:4px 8px; font-size:0.78rem; width:220px;
+  }
+</style>
+</head>
+<body>
+
+<div class="config-bar">
+  API base URL: <input id="apiBase" value="http://127.0.0.1:8000">
+  <span id="apiStatus"></span>
+</div>
+
+<header>
+  <div>
+    <h1>Storefront</h1>
+    <p>Products go straight into your checkout, order and stock tables.</p>
+  </div>
+</header>
+
+<main>
+  <section>
+    <div id="productGrid" class="grid">Loading products…</div>
+  </section>
+
+  <aside>
+    <h2>Your cart</h2>
+    <div id="cartList"><div class="cart-empty">Cart is empty — add something from the left.</div></div>
+    <div class="total-row"><span>Total</span><span id="cartTotal">Rs. 0</span></div>
+
+    <form class="checkout-form" id="checkoutForm">
+      <div>
+        <label for="custName">Full name</label>
+        <input id="custName" required placeholder="e.g. Ayesha Khan">
+      </div>
+      <div>
+        <label for="custEmail">Email</label>
+        <input id="custEmail" type="email" required placeholder="ayesha@example.com">
+      </div>
+      <div>
+        <label for="custPhone">Phone number</label>
+        <input id="custPhone" type="tel" required placeholder="03001234567">
+      </div>
+      <div>
+        <label for="custType">Customer type</label>
+        <select id="custType">
+          <option value="Regular">Regular</option>
+          <option value="Premium">Premium</option>
+          <option value="VIP">VIP</option>
+        </select>
+      </div>
+      <button type="submit" class="submit-btn" id="submitBtn">Place order</button>
+    </form>
+
+    <div id="resultMsg"></div>
+  </aside>
+</main>
+
+<script>
+let PRODUCTS = [];
+let CART = {}; // product_id -> quantity
+
+function apiBase(){ return document.getElementById('apiBase').value.replace(/\/$/, ''); }
+
+const FALLBACK_PRODUCTS = [
+  {product_id:"P-001", name:"Wireless Earbuds", price:4999, stock:50, description:"Bluetooth 5.0, 20hr battery"},
+  {product_id:"P-002", name:"Smart Watch", price:8999, stock:30, description:"Fitness tracking, AMOLED display"},
+  {product_id:"P-003", name:"Phone Stand", price:799, stock:100, description:"Adjustable aluminum stand"},
+  {product_id:"P-004", name:"Power Bank 20000mAh", price:3499, stock:40, description:"Fast charging, dual USB"},
+];
+
+async function loadProducts(){
+  const grid = document.getElementById('productGrid');
+  const status = document.getElementById('apiStatus');
+  try{
+    const res = await fetch(apiBase() + '/products');
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    PRODUCTS = data.products || [];
+    status.textContent = '● connected';
+    status.style.color = '#0f6857';
+  }catch(err){
+    PRODUCTS = FALLBACK_PRODUCTS;
+    status.textContent = '● API unreachable — showing demo products';
+    status.style.color = '#b3261e';
+  }
+  renderProducts();
+}
+
+function renderProducts(){
+  const grid = document.getElementById('productGrid');
+  if(PRODUCTS.length === 0){
+    grid.innerHTML = '<p>No products available right now.</p>';
+    return;
+  }
+  grid.innerHTML = PRODUCTS.map(p => `
+    <div class="card">
+      <h3>${escapeHtml(p.name)}</h3>
+      <p class="desc">${escapeHtml(p.description || '')}</p>
+      <div class="price">Rs. ${p.price.toLocaleString()}</div>
+      <div class="stock">${p.stock} in stock</div>
+      <button ${p.stock <= 0 ? 'disabled' : ''} onclick="addToCart('${p.product_id}')">
+        ${p.stock <= 0 ? 'Out of stock' : 'Add to cart'}
+      </button>
+    </div>
+  `).join('');
+}
+
+function addToCart(productId){
+  CART[productId] = (CART[productId] || 0) + 1;
+  renderCart();
+}
+function changeQty(productId, delta){
+  if(!CART[productId]) return;
+  CART[productId] += delta;
+  if(CART[productId] <= 0) delete CART[productId];
+  renderCart();
+}
+
+function renderCart(){
+  const list = document.getElementById('cartList');
+  const ids = Object.keys(CART);
+  if(ids.length === 0){
+    list.innerHTML = '<div class="cart-empty">Cart is empty — add something from the left.</div>';
+    document.getElementById('cartTotal').textContent = 'Rs. 0';
+    return;
+  }
+  let total = 0;
+  list.innerHTML = ids.map(id => {
+    const p = PRODUCTS.find(x => x.product_id === id);
+    if(!p) return '';
+    const lineTotal = p.price * CART[id];
+    total += lineTotal;
+    return `
+      <div class="cart-row">
+        <span>${escapeHtml(p.name)}</span>
+        <div class="qty-controls">
+          <button type="button" onclick="changeQty('${id}',-1)">−</button>
+          <span>${CART[id]}</span>
+          <button type="button" onclick="changeQty('${id}',1)">+</button>
+        </div>
+        <span>Rs. ${lineTotal.toLocaleString()}</span>
+      </div>`;
+  }).join('');
+  document.getElementById('cartTotal').textContent = 'Rs. ' + total.toLocaleString();
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msgBox = document.getElementById('resultMsg');
+  const submitBtn = document.getElementById('submitBtn');
+  const ids = Object.keys(CART);
+  if(ids.length === 0){
+    msgBox.innerHTML = '<div class="msg error">Add at least one product before checking out.</div>';
+    return;
+  }
+  const payload = {
+    customer_name: document.getElementById('custName').value,
+    customer_email: document.getElementById('custEmail').value,
+    phone_number: document.getElementById('custPhone').value,
+    customer_type: document.getElementById('custType').value,
+    items: ids.map(id => ({product_id: id, quantity: CART[id]}))
+  };
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Placing order…';
+  try{
+    const res = await fetch(apiBase() + '/checkout', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Checkout failed');
+    msgBox.innerHTML = `<div class="msg success">
+      Order placed! <br>
+      Customer ID: <strong>${data.customer_id}</strong><br>
+      Order ID: <strong>${data.order_id}</strong><br>
+      Total: Rs. ${data.order_value.toLocaleString()}<br>
+      <small>Save the Customer ID — you'll need it to raise a support ticket.</small>
+    </div>`;
+    CART = {};
+    renderCart();
+    loadProducts();
+    e.target.reset();
+  }catch(err){
+    msgBox.innerHTML = `<div class="msg error">Checkout failed: ${escapeHtml(err.message)}</div>`;
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Place order';
+  }
+});
+
+document.getElementById('apiBase').addEventListener('change', loadProducts);
+loadProducts();
+</script>
+</body>
+</html>
